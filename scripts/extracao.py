@@ -17,8 +17,31 @@ import os
 #TODO Melhorar tratativas de erros
 #TODO Achar uma forma de rodar o processo automático (depende de onde será e como será hospedados o código)
 
-url_secretarias = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/listar-dados?page='
-url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
+from dotenv import load_dotenv
+load_dotenv() 
+
+url_secretarias = os.getenv('URL_BASE_SECRETARIAS')
+url_dados = os.getenv('URL_BASE_DADOS')
+
+endpoint_secretarias = '/listar-dados'
+count = 1
+new_request = True
+while new_request:
+
+    url_request_secretarias = f'{url_secretarias}{endpoint_secretarias}?page={count}'
+    response = requests.get(url_request_secretarias)
+    print(count, response.status_code)
+    if response.status_code == 200:
+        dados = response.json()
+        next_page_url = dados.get('next_page_url')
+        if not next_page_url:
+            new_request = False
+        else:
+            count += 1
+    elif response.status_code == 429:
+        time.sleep(5)
+
+exit(1)
 
 response = requests.get(url_secretarias+'1')
 dados = response.json()
