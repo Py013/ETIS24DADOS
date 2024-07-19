@@ -22,70 +22,49 @@ load_dotenv()
 
 url_secretarias = os.getenv('URL_BASE_SECRETARIAS')
 url_dados = os.getenv('URL_BASE_DADOS')
+is_dev_local = os.getenv('IS_DEV_LOCAL', False)
+dev_local_max_request = os.getenv('DEV_LOCAL_MAX_REQUEST', 1)
 
 endpoint_secretarias = '/listar-dados'
 count = 1
+count_indicador = 2
 new_request = True
 while new_request:
-
     url_request_secretarias = f'{url_secretarias}{endpoint_secretarias}?page={count}'
     response = requests.get(url_request_secretarias)
-    print(count, response.status_code)
     if response.status_code == 200:
         dados = response.json()
         next_page_url = dados.get('next_page_url')
-        if not next_page_url:
+        if is_dev_local and count == dev_local_max_request:
+            new_request = False
+        elif not next_page_url:
             new_request = False
         else:
             count += 1
+            for d in dados['data']:
+                time.sleep(1)
+                c = d['codigo']
+                print('code: ', c)
+                response = requests.get(f'{url_dados}{c}')
+                try:
+                    dados = response.json()
+                except requests.exceptions.JSONDecodeError as e:
+                    time.sleep(30)
+                    try:
+                        dados = response.json()
+                    except Exception as e:
+                        c = f"{d['codigo']}-erro"
+                        dados = {"erro: ": str(e)}
+                        time.sleep(60)
+
+                nome_do_arquivo = f"{c}.json"
+                pasta = 'etis'
+                if not os.path.exists(pasta):
+                    os.makedirs(pasta)
+
+                # Caminho completo para o arquivo
+                caminho_do_arquivo = os.path.join(pasta, nome_do_arquivo)
+                with open(caminho_do_arquivo, 'w') as arquivo:
+                    json.dump(dados, arquivo, indent=4)            
     elif response.status_code == 429:
         time.sleep(5)
-
-exit(1)
-
-response = requests.get(url_secretarias+'1')
-dados = response.json()
-
-first_page = 1
-last_page = dados['last_page']
-# codes = [5401]
-for i in range(first_page, last_page+1):
-    print('page: ', i)
-    time.sleep(5)
-    response = requests.get(f'{url_secretarias}{i}')
-    try:
-        dados = response.json()
-    except Exception as e:
-        try:
-            time.sleep(5)
-            dados = response.json()
-        except Exception as e:
-            dados = {
-                "data": [{'codigo': f'erro-pagina-{i}'}]
-            }
-
-    for d in dados['data']:
-        time.sleep(1)
-        c = d['codigo']
-        print('code: ', c)
-        response = requests.get(f'{url_dados}{c}')
-        try:
-            dados = response.json()
-        except requests.exceptions.JSONDecodeError as e:
-            time.sleep(30)
-            try:
-                dados = response.json()
-            except Exception as e:
-                c = f"{d['codigo']}-erro"
-                dados = {"erro: ": str(e)}
-                time.sleep(60)
-
-        nome_do_arquivo = f"{c}.json"
-        pasta = 'etis'
-        if not os.path.exists(pasta):
-            os.makedirs(pasta)
-
-        # Caminho completo para o arquivo
-        caminho_do_arquivo = os.path.join(pasta, nome_do_arquivo)
-        with open(caminho_do_arquivo, 'w') as arquivo:
-            json.dump(dados, arquivo, indent=4)
