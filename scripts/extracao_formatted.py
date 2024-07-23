@@ -8,7 +8,7 @@ url_listas = f'https://egov.santos.sp.gov.br/dadosabertos/backend/api/listar-dad
 url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
 secretarias = [2907, 4681, 2859, 576, 779] # Códigos das secretarias: SEDUC, SEFIN, SEGOV, SEMES, SESEG
 autarquias = [822, 1736] # Códigos das autarquias: CET, IPREV
-tempo_espera = 1.2 # Segundos
+tempo_espera = 1.3 # Segundos
 if not os.path.exists(caminho_saida := 'output'): os.makedirs(caminho_saida) # Cria a pasta de saída
 # Configurações de acesso aos dados
 
