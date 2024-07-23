@@ -1,15 +1,20 @@
 import requests, json, os
 from time import sleep
 from ptymer import Timer
+from dotenv import load_dotenv
 
+load_dotenv() 
+url_secretarias = os.getenv('URL_BASE_SECRETARIAS')
+url_dados = os.getenv('URL_BASE_DADOS')
+# Docker file?
 
 qtd = 250 # Quantidade de listas por página
-url_listas = f'https://egov.santos.sp.gov.br/dadosabertos/backend/api/listar-dados?per_page={qtd}'
-url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
+url_listas = f'{url_secretarias}/listar-dados?per_page={qtd}'
+#url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
 secretarias = [2907, 4681, 2859, 576, 779] # Códigos das secretarias: SEDUC, SEFIN, SEGOV, SEMES, SESEG
 autarquias = [822, 1736] # Códigos das autarquias: CET, IPREV
-tempo_espera = 1.3 # Segundos
-if not os.path.exists(caminho_saida := 'output'): os.makedirs(caminho_saida) # Cria a pasta de saída
+tempo_espera = 1.28 # Segundos
+if not os.path.exists(caminho_saida := 'etis'): os.makedirs(caminho_saida) # Cria a pasta de saída
 # Configurações de acesso aos dados
 
 
@@ -23,7 +28,7 @@ def acessarListas(url: str, pagina: int):
     except requests.exceptions.HTTPError as e:
         if response.status_code == 429:
             print('Erro 429 - Muitas requisições!')
-            sleep(40)
+            sleep(30)
 
     except Exception as e:
         print(f'Erro em acessar página {pagina}!\n Erro: {e}\nResponse:{response}')
@@ -45,7 +50,7 @@ def acessarDados(url: str, c: int, depth: int, caminho_saida: str):
     except requests.exceptions.HTTPError as e:
         if response.status_code == 429:
             print('Erro 429 - Muitas requisições!')
-            sleep(40)
+            sleep(30)
     
     except Exception as e:
         print(f'Erro em acessar dados de {c}!\n Erro: {e}\nResponse:{response}')
@@ -54,8 +59,8 @@ def acessarDados(url: str, c: int, depth: int, caminho_saida: str):
         salvarArquivo(data, c, caminho_saida)
         return
 
-    if depth < 3: acessarDados(url, c, depth+1)
-    else: salvarArquivo({"erro": str(e)}, c, caminho_saida)
+    if depth < 3: acessarDados(url, c, depth+1) # Tenta acessar novamente
+    else: salvarArquivo({"erro": str(e)}, f'{c}_erro', caminho_saida) # Salva o erro
 # Função para acessar os dados (json)
 
 
@@ -77,6 +82,7 @@ if __name__ == '__main__':
         last_page = requests.get(f'{url_listas}&secretarias={cod_secretaria}&page=1').json()['last_page'] # Pega o número da última página
         for i in range(1, last_page+1): # Itera sobre as páginas
             listaCodigos.extend([item['codigo'] for item in acessarListas(f'{url_listas}&secretarias={cod_secretaria}&page=', i)]) # Adiciona os códigos da página
+            # listaCodigos.extend([(item['codigo'], f'/Secretarias/{cod_secretaria}/') for item in acessarListas(f'{url_listas}&secretarias={cod_secretaria}&page=', i)]) # Separação por secretaria
             sleep(tempo_espera)
             
     for cod_autarquia in autarquias:
@@ -84,6 +90,7 @@ if __name__ == '__main__':
         last_page = requests.get(f'{url_listas}&autarquias={cod_autarquia}&page=1').json()['last_page'] # Pega o número da última página
         for i in range(1, last_page+1): # Itera sobre as páginas
             listaCodigos.extend([item['codigo'] for item in acessarListas(f'{url_listas}&autarquias={cod_autarquia}&page=', i)]) # Adiciona os códigos da página
+            # listaCodigos.extend([(item['codigo'], f'/Autarquias/{cod_autarquia}/') for item in acessarListas(f'{url_listas}&autarquias={cod_autarquia}&page=', i)]) # Separação por autarquia
             sleep(tempo_espera)
 
     print(f'Quantidade de códigos: {len(listaCodigos)}')
@@ -91,5 +98,6 @@ if __name__ == '__main__':
     with Timer(visibility=True) as tm:
         for c in listaCodigos:
             acessarDados(url_dados, c, 0, caminho_saida)
+            # acessarDados(url_dados, c[0], 0, f'{caminho_saida}{c[1]}')
             sleep(tempo_espera)
         
