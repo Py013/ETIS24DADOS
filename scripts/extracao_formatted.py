@@ -7,11 +7,12 @@ load_dotenv()
 url_dados = os.getenv('URL_BASE_DADOS')
 qtd = os.getenv('QTD_LISTAS_PAGINA') # Quantidade de listas por página
 url_listas = f'{os.getenv('URL_BASE_SECRETARIAS')}/listar-dados?per_page={qtd}'
-#url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
 secretarias = os.getenv('ID_SECRETARIAS').split(',') # Códigos das secretarias: SEDUC, SEFIN, SEGOV, SEMES, SESEG
 autarquias = os.getenv('ID_AUTARQUIAS').split(',') # Códigos das autarquias: CET, IPREV
 tempo_espera = float(os.getenv('ESPERA_REQUISICOES')) # Segundos
 if not os.path.exists(caminho_saida := f'{os.getenv('CAMINHO_SAIDA')}'): os.makedirs(caminho_saida) # Cria a pasta de saída
+# for secretaria in secretarias: os.makedirs(f'{caminho_saida}/Secretarias/{secretaria}') # Cria as pastas das secretarias
+# for autarquia in autarquias: os.makedirs(f'{caminho_saida}/Autarquias/{autarquia}') # Cria as pastas das autarquias
 # Configurações de acesso aos dados
 
 
