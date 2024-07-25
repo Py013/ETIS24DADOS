@@ -4,17 +4,14 @@ from ptymer import Timer
 from dotenv import load_dotenv
 
 load_dotenv() 
-url_secretarias = os.getenv('URL_BASE_SECRETARIAS')
 url_dados = os.getenv('URL_BASE_DADOS')
-# Docker file?
-
-qtd = 250 # Quantidade de listas por página
-url_listas = f'{url_secretarias}/listar-dados?per_page={qtd}'
+qtd = os.getenv('QTD_LISTAS_PAGINA') # Quantidade de listas por página
+url_listas = f'{os.getenv('URL_BASE_SECRETARIAS')}/listar-dados?per_page={qtd}'
 #url_dados = 'https://egov.santos.sp.gov.br/dadosabertos/backend/api/detalhes/downloads/json/'
-secretarias = [2907, 4681, 2859, 576, 779] # Códigos das secretarias: SEDUC, SEFIN, SEGOV, SEMES, SESEG
-autarquias = [822, 1736] # Códigos das autarquias: CET, IPREV
-tempo_espera = 1.28 # Segundos
-if not os.path.exists(caminho_saida := 'etis'): os.makedirs(caminho_saida) # Cria a pasta de saída
+secretarias = os.getenv('ID_SECRETARIAS').split(',') # Códigos das secretarias: SEDUC, SEFIN, SEGOV, SEMES, SESEG
+autarquias = os.getenv('ID_AUTARQUIAS').split(',') # Códigos das autarquias: CET, IPREV
+tempo_espera = float(os.getenv('ESPERA_REQUISICOES')) # Segundos
+if not os.path.exists(caminho_saida := f'{os.getenv('CAMINHO_SAIDA')}'): os.makedirs(caminho_saida) # Cria a pasta de saída
 # Configurações de acesso aos dados
 
 
