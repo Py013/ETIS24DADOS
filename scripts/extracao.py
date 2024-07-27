@@ -10,15 +10,7 @@ url_listas = f"{os.getenv('URL_BASE_SECRETARIAS')}/listar-dados?per_page={qtd}"
 secretarias = os.getenv('ID_SECRETARIAS').split(',') # Códigos das secretarias: SEDUC, SEFIN, SESEG
 autarquias = os.getenv('ID_AUTARQUIAS').split(',') # Códigos das autarquias: CET
 tempo_espera = float(os.getenv('ESPERA_REQUISICOES', 1.28)) # Segundos
-if not os.path.exists(caminho_saida := f"{os.getenv('CAMINHO_SAIDA', 'etis')}"): os.makedirs(caminho_saida) # Cria a pasta de saída
-
-for secretaria in secretarias: 
-    caminho_sec = f'{caminho_saida}/Secretarias/{secretaria}'
-    os.makedirs(caminho_sec) if not os.path.exists(caminho_sec) else None # Cria as pastas das secretarias
-
-for autarquia in autarquias: 
-    caminho_aut = f'{caminho_saida}/Autarquias/{autarquia}'
-    os.makedirs(caminho_aut) if not os.path.exists(caminho_aut) else None # Cria as pastas das autarquias
+if not os.path.exists(caminho_saida := f"{os.getenv('CAMINHO_SAIDA', 'etis')}/1_bronze/"): os.makedirs(caminho_saida) # Cria a pasta de saída
 # Configurações de acesso aos dados
 
 
@@ -85,20 +77,20 @@ if __name__ == '__main__':
         print(f'Secretaria {cod_secretaria}!')
         last_page = requests.get(f'{url_listas}&secretarias={cod_secretaria}&page=1').json()['last_page'] # Pega o número da última página
         for i in range(1, last_page+1): # Itera sobre as páginas
-            listaCodigos.extend([(item['codigo'], f'/Secretarias/{cod_secretaria}/') for item in acessarListas(f'{url_listas}&secretarias={cod_secretaria}&page=', i)]) # Separação por secretaria
+            listaCodigos.extend([item['codigo'] for item in acessarListas(f'{url_listas}&secretarias={cod_secretaria}&page=', i)]) # Adiciona os códigos da página
             sleep(tempo_espera)
             
     for cod_autarquia in autarquias:
         print(f'Autarquia {cod_autarquia}!')
         last_page = requests.get(f'{url_listas}&autarquias={cod_autarquia}&page=1').json()['last_page'] # Pega o número da última página
         for i in range(1, last_page+1): # Itera sobre as páginas
-            listaCodigos.extend([(item['codigo'], f'/Autarquias/{cod_autarquia}/') for item in acessarListas(f'{url_listas}&autarquias={cod_autarquia}&page=', i)]) # Separação por autarquia
+            listaCodigos.extend([item['codigo'] for item in acessarListas(f'{url_listas}&autarquias={cod_autarquia}&page=', i)]) # Adiciona os códigos da página
             sleep(tempo_espera)
 
     print(f'Quantidade de códigos: {len(listaCodigos)}')
 
     with Timer(visibility=True) as tm:
         for c in listaCodigos:
-            acessarDados(url_dados, c[0], 0, f'{caminho_saida}{c[1]}')
+            acessarDados(url_dados, c, 0, caminho_saida)
             sleep(tempo_espera)
         
