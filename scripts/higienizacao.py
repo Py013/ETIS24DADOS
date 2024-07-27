@@ -38,7 +38,7 @@ for filename in os.listdir("./etis/1_bronze"):
         dados_normalizados = dados_normalizados.drop(columns=['valores']).join(valores_expanded)
 
         
-        dados_normalizados = dados_normalizados.dropna(subset=['valores_valor'])
+        dados_normalizados = dados_normalizados[dados_normalizados['valores_descricao'].isnull()]
 
         dir_name = './etis/2_silver'
 
