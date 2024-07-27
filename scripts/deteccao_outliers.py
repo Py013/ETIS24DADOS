@@ -3,10 +3,12 @@ import numpy as np
 from dotenv import load_dotenv
 import os
 from statistics import median
+import requests
 
 
 class BaseDetectorOutlier:
     def __init__(self, csv_path, epsilon=3):
+        self.csv_path = csv_path
         self.id_arquivo = csv_path.split('/')[-1]
         self.infos = pd.read_csv(csv_path, sep=';')
         self.codigos = []
@@ -46,7 +48,10 @@ class BaseDetectorOutlier:
     def __gerar_valores(self, mediana=True):
         if mediana:
             self.nome_metrica = 'mediana'
-            self.metrica_basica = median(self.dados)
+            try:
+                self.metrica_basica = median(self.dados)
+            except:
+                self.metrica_basica = 0
         else:
             self.nome_metrica = 'média'
             self.metrica_basica = self.dados.mean()
@@ -62,14 +67,25 @@ class BaseDetectorOutlier:
                                                      self.secretarias,
                                                      self.valores_codigo):
             if dado < self.limite_inferior or dado > self.limite_superior:
-                outliers.append([self.id_arquivo,
-                                 val_cod,
-                                 dado,
-                                 self.metrica_basica,
-                                 secretaria,
-                                 self.desvio_padrao,
-                                 self.limite_superior,
-                                 self.limite_inferior])
+                # outliers.append([self.id_arquivo,
+                #                  val_cod,
+                #                  dado,
+                #                  self.metrica_basica,
+                #                  secretaria,
+                #                  self.desvio_padrao,
+                #                  self.limite_superior,
+                #                  self.limite_inferior])
+                outliers.append({"idCodigoArquivo": int(self.id_arquivo[:-4]),
+                                 "idCodigoValor": val_cod,
+                                 "valorIndicador": float(dado),
+                                 "mediana": float(self.metrica_basica),
+                                 "desvioPadrao": float(self.desvio_padrao),
+                                 "limiteSuperior": float(self.limite_superior),
+                                 "limiteInferior": float(self.limite_inferior),
+                                 "siglaSecretaria": secretaria}
+                                )
+                
+                
         return outliers
 
     def descricao(self):
@@ -82,12 +98,12 @@ class BaseDetectorOutlier:
 
     def escrever_csv(self):
         if not os.path.exists(''):
-            file = open(csv_name, 'a')
+            file = open(self.csv_path[:-3] + '.json', 'a')
             file.write('codigo;valor_outlier;data;fonte\n')
         else:
-            file = open(csv_name, 'a')
+            file = open(self.csv_path[:-3] + '.json', 'a')
 
-        with open(csv_name, 'a') as file:
+        with open(self.csv_path[:-3] + '.json', 'a') as file:
             for outlier in self.get_outliers():
                 for i in range(len(outlier)-1):
                     file.write(str(outlier[i]) + ';')
@@ -96,22 +112,18 @@ class BaseDetectorOutlier:
 if __name__ == '__main__':
     load_dotenv()
     CAMINHO_BASE = f'{os.getenv("CAMINHO_SAIDA")}'
-    dicionario_outliers = []
+    outliers = []
     for file in os.listdir(CAMINHO_BASE + '/2_silver/'):
-        test = BaseDetectorOutlier(CAMINHO_BASE + '/2_silver/' + file, 0)
-        test.descricao()
+        test = BaseDetectorOutlier(CAMINHO_BASE + '/2_silver/' + file, 3)
+        #test.descricao()
 
-        outliers = test.get_outliers()
-
-        if len(outliers) == 0:
-            print("Nenhum outlier encontrado.")
-        else:
-            print()
-            for outlier in outliers:
-                print('Código:', outlier[0])
-                print('Valor encontrado:', outlier[1])
-                print('Data:', outlier[2])
-                print('Fonte:', outlier[3])
-                print()
-
-        test.escrever_csv()
+        outliers += test.get_outliers()
+        
+        print('len: ', len(outliers))
+        for o in outliers:
+            print('out: ', o)
+            res = requests.post(f'{os.getenv("DOMINIO")}/Indicador/Add', json=o)
+            print('res: ', res.status_code)
+            print('res: ', res.text)
+        
+    print(outliers)
