@@ -28,7 +28,6 @@ for filename in os.listdir("./etis/1_bronze"):
 
         valores_expanded = dados_normalizados['valores'].explode().apply(pd.Series)
         
-        
         valores_expanded = valores_expanded.rename(columns={
             'valor': 'valores_valor',
             'data': 'valores_data',
@@ -36,10 +35,10 @@ for filename in os.listdir("./etis/1_bronze"):
             'descricao': 'valores_descricao'
         })
 
-
-
-
         dados_normalizados = dados_normalizados.drop(columns=['valores']).join(valores_expanded)
+
+        
+        dados_normalizados = dados_normalizados.dropna(subset=['valores_valor'])
 
         dir_name = './etis/2_silver'
 
