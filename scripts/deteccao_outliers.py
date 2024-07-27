@@ -155,8 +155,8 @@ if __name__ == '__main__':
         print('len: ', len(outliers))
         for o in outliers:
             print('out: ', o)
-            #res = requests.post(f'{os.getenv("DOMINIO")}/Indicador/Add', json=o)
-           #print('res: ', res.status_code)
-           # print('res: ', res.text)
+            res = requests.post(f'{os.getenv("DOMINIO")}/Indicador/Add', json=o)
+            print('res: ', res.status_code)
+            print('res: ', res.text)
         
     print(outliers)
