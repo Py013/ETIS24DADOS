@@ -4,7 +4,7 @@ import os
 
 dados_json = []
 
-print(os.listdir("./etis/"))
+# print(os.listdir("./etis/"))
 
 for filename in os.listdir("./etis/1_bronze"):
     filepath = os.path.join("./etis/1_bronze", filename)
@@ -27,12 +27,18 @@ for filename in os.listdir("./etis/1_bronze"):
         dados_normalizados.drop(columns=['tags', 'metas', 'eixos', 'periodicidade.codigo', 'periodicidade.descricao'], inplace=True)
 
         valores_expanded = dados_normalizados['valores'].explode().apply(pd.Series)
+        
+        
         valores_expanded = valores_expanded.rename(columns={
-            'valor': 'valores.valor',
-            'codigo': 'valores.codigo',
-            'data': 'valores.data',
-            'descricao': 'valores.descricao'
+            'valor': 'valores_valor',
+            'data': 'valores_data',
+            'codigo': 'valores_codigo',
+            'descricao': 'valores_descricao'
         })
+
+
+
+
         dados_normalizados = dados_normalizados.drop(columns=['valores']).join(valores_expanded)
 
         dir_name = './etis/2_silver'
