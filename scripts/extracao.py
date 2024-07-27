@@ -1,70 +1,104 @@
-import requests
-from pprint import pprint
-import time
-import json
-import os 
-# site
-# https://egov.santos.sp.gov.br/dadosabertos/listar/dados
-
-# lista secretarias
-# https://egov.santos.sp.gov.br/dadosabertos/backend/api/listar-filtros
-
-# filtro de secretarias
-# https://egov.santos.sp.gov.br/dadosabertos/listar/dados?secretarias=2
-
-#TODO Apliar filtro para as secretarias específicas, não é necessário baixar de todas
-#TODO Utilizar os requests com a lib asyncio, para fazer requests mais rapidos de forma asíncrona
-#TODO Melhorar tratativas de erros
-#TODO Achar uma forma de rodar o processo automático (depende de onde será e como será hospedados o código)
-
+import requests, json, os
+from time import sleep
+from ptymer import Timer
 from dotenv import load_dotenv
+
 load_dotenv() 
-
-url_secretarias = os.getenv('URL_BASE_SECRETARIAS')
 url_dados = os.getenv('URL_BASE_DADOS')
-is_dev_local = os.getenv('IS_DEV_LOCAL', False)
-dev_local_max_request = os.getenv('DEV_LOCAL_MAX_REQUEST', 1)
+qtd = os.getenv('QTD_LISTAS_PAGINA') # Quantidade de listas por página
+url_listas = f"{os.getenv('URL_BASE_SECRETARIAS')}/listar-dados?per_page={qtd}"
+secretarias = os.getenv('ID_SECRETARIAS').split(',') # Códigos das secretarias: SEDUC, SEFIN, SESEG
+autarquias = os.getenv('ID_AUTARQUIAS').split(',') # Códigos das autarquias: CET
+tempo_espera = float(os.getenv('ESPERA_REQUISICOES', 1.28)) # Segundos
+if not os.path.exists(caminho_saida := f"{os.getenv('CAMINHO_SAIDA', 'etis')}"): os.makedirs(caminho_saida) # Cria a pasta de saída
 
-endpoint_secretarias = '/listar-dados'
-count = 1
-count_indicador = 2
-new_request = True
-while new_request:
-    url_request_secretarias = f'{url_secretarias}{endpoint_secretarias}?page={count}'
-    response = requests.get(url_request_secretarias)
-    if response.status_code == 200:
-        dados = response.json()
-        next_page_url = dados.get('next_page_url')
-        if is_dev_local and count == dev_local_max_request:
-            new_request = False
-        elif not next_page_url:
-            new_request = False
-        else:
-            count += 1
-            for d in dados['data']:
-                time.sleep(1)
-                c = d['codigo']
-                print('code: ', c)
-                response = requests.get(f'{url_dados}{c}')
-                try:
-                    dados = response.json()
-                except requests.exceptions.JSONDecodeError as e:
-                    time.sleep(30)
-                    try:
-                        dados = response.json()
-                    except Exception as e:
-                        c = f"{d['codigo']}-erro"
-                        dados = {"erro: ": str(e)}
-                        time.sleep(60)
+for secretaria in secretarias: 
+    caminho_sec = f'{caminho_saida}/Secretarias/{secretaria}'
+    os.makedirs(caminho_sec) if not os.path.exists(caminho_sec) else None # Cria as pastas das secretarias
 
-                nome_do_arquivo = f"{c}.json"
-                pasta = 'etis'
-                if not os.path.exists(pasta):
-                    os.makedirs(pasta)
+for autarquia in autarquias: 
+    caminho_aut = f'{caminho_saida}/Autarquias/{autarquia}'
+    os.makedirs(caminho_aut) if not os.path.exists(caminho_aut) else None # Cria as pastas das autarquias
+# Configurações de acesso aos dados
 
-                # Caminho completo para o arquivo
-                caminho_do_arquivo = os.path.join(pasta, nome_do_arquivo)
-                with open(caminho_do_arquivo, 'w') as arquivo:
-                    json.dump(dados, arquivo, indent=4)            
-    elif response.status_code == 429:
-        time.sleep(5)
+
+def acessarListas(url: str, pagina: int):
+    print(f"Página {pagina}!")
+    try:
+        response = requests.get(f'{url}{pagina}')
+        response.raise_for_status()
+        data = response.json()
+    
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 429:
+            print('Erro 429 - Muitas requisições!')
+            sleep(30)
+
+    except Exception as e:
+        print(f'Erro em acessar página {pagina}!\n Erro: {e}\nResponse:{response}')
+
+    else:
+        return data['data']
+
+    return acessarListas(url, pagina)
+# Função para acessar as listas
+
+
+def acessarDados(url: str, c: int, depth: int, caminho_saida: str):
+    print(f"Código {c}!")
+    try:
+        response = requests.get(f'{url}{c}')
+        response.raise_for_status()
+        data = response.json()
+    
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 429:
+            print('Erro 429 - Muitas requisições!')
+            sleep(30)
+    
+    except Exception as e:
+        print(f'Erro em acessar dados de {c}!\n Erro: {e}\nResponse:{response}')
+    
+    else:
+        salvarArquivo(data, c, caminho_saida)
+        return
+
+    if depth < 3: acessarDados(url, c, depth+1, caminho_saida) # Tenta acessar novamente
+    else: salvarArquivo({"erro": str(e)}, f'{c}_erro', caminho_saida) # Salva o erro
+# Função para acessar os dados (json)
+
+
+def salvarArquivo(dados: json, c: int, pasta: str):
+    try:
+        with open(os.path.join(pasta, f'{c}.json'), 'w') as arquivo:
+            json.dump(dados, arquivo, indent=4)
+
+    except Exception as e:
+        print(f'Erro ao salvar arquivo {c}.json! Erro: \n{e}')
+# Função para salvar os arquivos
+
+
+if __name__ == '__main__':
+    listaCodigos = []
+
+    for cod_secretaria in secretarias:
+        print(f'Secretaria {cod_secretaria}!')
+        last_page = requests.get(f'{url_listas}&secretarias={cod_secretaria}&page=1').json()['last_page'] # Pega o número da última página
+        for i in range(1, last_page+1): # Itera sobre as páginas
+            listaCodigos.extend([(item['codigo'], f'/Secretarias/{cod_secretaria}/') for item in acessarListas(f'{url_listas}&secretarias={cod_secretaria}&page=', i)]) # Separação por secretaria
+            sleep(tempo_espera)
+            
+    for cod_autarquia in autarquias:
+        print(f'Autarquia {cod_autarquia}!')
+        last_page = requests.get(f'{url_listas}&autarquias={cod_autarquia}&page=1').json()['last_page'] # Pega o número da última página
+        for i in range(1, last_page+1): # Itera sobre as páginas
+            listaCodigos.extend([(item['codigo'], f'/Autarquias/{cod_autarquia}/') for item in acessarListas(f'{url_listas}&autarquias={cod_autarquia}&page=', i)]) # Separação por autarquia
+            sleep(tempo_espera)
+
+    print(f'Quantidade de códigos: {len(listaCodigos)}')
+
+    with Timer(visibility=True) as tm:
+        for c in listaCodigos:
+            acessarDados(url_dados, c[0], 0, f'{caminho_saida}{c[1]}')
+            sleep(tempo_espera)
+        
