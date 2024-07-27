@@ -24,10 +24,12 @@ for filename in os.listdir("./etis/1_bronze"):
 
         dados_normalizados['id_orgao'] = dados_normalizados[orgao].apply(lambda x: x[0]['codigo'] if len(x) > 0 else None)
         dados_normalizados['sigla_orgao'] = dados_normalizados[orgao].apply(lambda x: x[0]['sigla'] if len(x) > 0 else None)
+        dados_normalizados['metas_numero'] = dados_normalizados['metas'].apply(lambda x: x[0]['numero'] if len(x) > 0 else None)
+        dados_normalizados['eixos_codigo'] = dados_normalizados['eixos'].apply(lambda x: x[0]['codigo'] if len(x) > 0 else None)
+        dados_normalizados['tags_codigo'] = dados_normalizados['tags'].apply(lambda x: x[0]['codigo'] if len(x) > 0 else None)
         dados_normalizados['tipo_orgao'] = orgao
-
         dados_normalizados.drop(columns=['autarquias', 'secretarias'], inplace=True)
-        dados_normalizados.drop(columns=['tags', 'metas', 'eixos', 'periodicidade.codigo', 'periodicidade.descricao'], inplace=True)
+        dados_normalizados.drop(columns=['periodicidade.codigo', 'periodicidade.descricao'], inplace=True)
 
         valores_expanded = dados_normalizados['valores'].explode().apply(pd.Series)
         

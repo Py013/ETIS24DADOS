@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 from statistics import median
 import requests
+import math
 
 
 class BaseDetectorOutlier:
@@ -36,8 +37,13 @@ class BaseDetectorOutlier:
         self.dados = np.array(self.dados, dtype='float32')
         self.codigos = self.infos['codigo'].values
         self.datas = self.infos['valores_data']
-        self.secretarias = self.infos['fonte']
+        self.secretarias = self.infos['sigla_orgao']
+        self.nome_indicador = self.infos['nome']
         self.valores_codigo = self.infos['valores_codigo']
+        self.metas_numero = self.infos['metas_numero'].values
+        self.eixos_codigo = self.infos['eixos_codigo']
+        self.fonte = self.infos['fonte']
+        self.tags_codigo = self.infos['tags_codigo']
 
         dados_nao_nulos = []
         for d in self.dados:
@@ -75,14 +81,32 @@ class BaseDetectorOutlier:
                 #                  self.desvio_padrao,
                 #                  self.limite_superior,
                 #                  self.limite_inferior])
+                #print(self.eixos_codigo)
+                try:
+                    if math.isnan(self.metas_numero[0]):
+                        self.metas_numero = 0
+                    else:
+                        self.metas_numero = self.metas_numero[0]
+                except:
+                    self.metas_numero = 0
+                print(self.metas_numero)
+
+                 
                 outliers.append({"idCodigoArquivo": int(self.id_arquivo[:-4]),
-                                 "idCodigoValor": val_cod,
+                                 "NomeIndicador": str(self.nome_indicador[0]),
+                                 "idCodigoValor": int(val_cod),
                                  "valorIndicador": float(dado),
                                  "mediana": float(self.metrica_basica),
                                  "desvioPadrao": float(self.desvio_padrao),
                                  "limiteSuperior": float(self.limite_superior),
                                  "limiteInferior": float(self.limite_inferior),
-                                 "siglaSecretaria": secretaria}
+                                 "siglaSecretaria": str(secretaria),
+                                 "IdIndicador": f"{self.id_arquivo[:-4]}-{val_cod}-{self.metas_numero}-{str(self.eixos_codigo[0])}-{self.fonte[0]}-{self.tags_codigo[0]}",
+                                 #"metasNumero": int(self.metas_numero[0]),
+                                 #"eixos_codigo": int(self.eixos_codigo[0]),
+                                 #"fonte": str(self.fonte),
+                                 #"tags_codigo": int(self.tags_codigo[0]),
+                                 }
                                 )
                 
                 
@@ -97,11 +121,11 @@ class BaseDetectorOutlier:
         print('Desvio padrão:', self.desvio_padrao)
 
     def escrever_csv(self):
-        if not os.path.exists(''):
+        """if not os.path.exists(''):
             file = open(self.csv_path[:-3] + '.json', 'a')
             file.write('codigo;valor_outlier;data;fonte\n')
         else:
-            file = open(self.csv_path[:-3] + '.json', 'a')
+            file = open(self.csv_path[:-3] + '.json', 'a')"""
 
         with open(self.csv_path[:-3] + '.json', 'a') as file:
             for outlier in self.get_outliers():
@@ -116,7 +140,7 @@ if __name__ == '__main__':
     for file in os.listdir(CAMINHO_BASE + '/2_silver/'):
         test = BaseDetectorOutlier(CAMINHO_BASE + '/2_silver/' + file, 3)
         #test.descricao()
-
+        
         outliers += test.get_outliers()
         
         print('len: ', len(outliers))
