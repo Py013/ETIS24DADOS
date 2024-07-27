@@ -89,6 +89,15 @@ class BaseDetectorOutlier:
                         self.metas_numero = self.metas_numero[0]
                 except:
                     self.metas_numero = 0
+                
+                try:
+                    if math.isnan(self.eixos_codigo[0]):
+                        self.eixos_codigo = 0
+                    else:
+                        self.eixos_codigo = self.eixos_codigo[0]
+                except:
+                    self.metas_numero = 0
+                    
                 print(self.metas_numero)
 
                  
@@ -101,7 +110,7 @@ class BaseDetectorOutlier:
                                  "limiteSuperior": float(self.limite_superior),
                                  "limiteInferior": float(self.limite_inferior),
                                  "siglaSecretaria": str(secretaria),
-                                 "IdIndicador": f"{self.id_arquivo[:-4]}-{val_cod}-{self.metas_numero}-{str(self.eixos_codigo[0])}-{self.fonte[0]}-{self.tags_codigo[0]}",
+                                 "IdIndicador": f"{self.id_arquivo[:-4]}-{val_cod}-{self.metas_numero}-{str(self.eixos_codigo)}-{self.fonte[0]}-{self.tags_codigo[0]}",
                                  #"metasNumero": int(self.metas_numero[0]),
                                  #"eixos_codigo": int(self.eixos_codigo[0]),
                                  #"fonte": str(self.fonte),
