@@ -5,7 +5,7 @@ import os
 from statistics import median
 import requests
 import math
-
+import csv
 
 class BaseDetectorOutlier:
     def __init__(self, csv_path, epsilon=3):
@@ -146,17 +146,27 @@ if __name__ == '__main__':
     load_dotenv()
     CAMINHO_BASE = f'{os.getenv("CAMINHO_SAIDA")}'
     outliers = []
-    for file in os.listdir(CAMINHO_BASE + '/2_silver/'):
+    silver_folder = os.listdir(CAMINHO_BASE + '/2_silver/')
+    for file in silver_folder:
+        if ".gitempty" == file:
+            continue
         test = BaseDetectorOutlier(CAMINHO_BASE + '/2_silver/' + file, 3)
         #test.descricao()
         
-        outliers += test.get_outliers()
-        
-        print('len: ', len(outliers))
-        for o in outliers:
-            print('out: ', o)
-            res = requests.post(f'{os.getenv("DOMINIO")}/Indicador/Add', json=o)
-            print('res: ', res.status_code)
-            print('res: ', res.text)
-        
+        outliers += test.get_outliers()   
     print(outliers)
+    print('len: ', len(outliers))
+
+    # Campos que serão usados como cabeçalhos no arquivo CSV
+    fieldnames = outliers[0].keys()
+
+    save_dir = os.path.join(f'{CAMINHO_BASE}/3_gold/')
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    # Salvando como CSV
+    with open(f'{save_dir}outliers.csv', mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(outliers)
+
+
